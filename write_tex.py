@@ -75,7 +75,7 @@ def write_tex(gnd,inFile,outFile,background, printEcm,printEComp,squeeze,zero, v
 \\hline\\hline \n"
 
     RtableHeader = "\
-SSSSS \\begin{longtable}{c|@@@@} \n\
+\\begin{longtable}{c|@@@@} \n\
 \\caption{ \n\
 R-matrix parameters !!!!! +++++ ^^^^ \n\
 }\\\\[1pt] \n\
