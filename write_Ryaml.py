@@ -31,7 +31,7 @@ import os,pwd
 
 ##############################################  write_Ryaml / Rjson
 
-def write_Ryaml(gnds, verbose,debug):
+def write_Ryaml(gnds, Yaml, verbose,debug):
   
     domain = gnds.styles.getEvaluatedStyle().projectileEnergyDomain
     energyUnit = domain.unit
@@ -60,7 +60,7 @@ def write_Ryaml(gnds, verbose,debug):
 
     proj,targ = gnds.projectile,gnds.target
     elasticChannel = '%s + %s' % (proj,targ)
-    PoPs = gnds.PoPs    
+    PoPs = gnds.PoPs 
 
 # HEADER
     Header['projectile'] = proj
@@ -120,6 +120,7 @@ def write_Ryaml(gnds, verbose,debug):
         try:
             jt,tt,et =     target.spin[0].float('hbar'), target.parity[0].value,     target.energy[0].pqu(energyUnit).value
         except:
+            print('  Projectile',t,'has missing spin, parity or excitation energy')
             jt,tt,et = None,None,None
 
         Particles[p] = {'gndsName':p, 'gsMass':pMass, 'charge':pZ, 'spin':jp, 'parity':pt, 'excitation':float(ep)}
@@ -128,6 +129,7 @@ def write_Ryaml(gnds, verbose,debug):
         Particles[CN] = {'gndsName':CN, 'gsMass':masses.getMassFromZA( cZA ), 'charge':tZ+pZ, 'excitation':0.0}
         try:
             CN_PoPs = PoPs[CN]
+            if hasattr(CN_PoPs,'nucleus'):  CN_PoPs = CN_PoPs.nucleus
             jCN = CN_PoPs.spin[0].float('hbar')
             pCN = CN_PoPs.parity[0].value
             Particles[CN]['spin'] = jCN
@@ -377,10 +379,13 @@ def write_Ryaml(gnds, verbose,debug):
 
     Parts = ['Header', 'R_Matrix', 'Particles', 'Reactions', 'Spin Groups', 'Data', 'Covariances']  # ordered
     
-    output = ''
-    for part in Parts:  # Data.keys():
-        d = {part:Info[part]}
-        output += dump(d, Dumper=Dumper)
+    if Yaml:
+        output = ''
+        for part in Parts:  # Data.keys():
+            d = {part:Info[part]}
+            output += dump(d, Dumper=Dumper) 
+    else:
+        output = json.dumps(Info, sort_keys=False, indent=2)
     
     return(output)
     
@@ -400,9 +405,14 @@ if __name__=="__main__":
     
     gnds = reactionSuiteModule.ReactionSuite.readXML_file( args.inFile )
     
-    otype = 'Rjson' if args.json else 'Ryaml'
+    if args.json:
+        otype = 'json' 
+    else:
+        otype= 'Ryaml'
+        from json import load, dump
+
     outFile = args.inFile + '.' + otype
-    output = write_Ryaml(gnds, args.verbose,args.debug)
+    output = write_Ryaml(gnds, not args.json, args.verbose,args.debug)
 
     ofile = open(outFile,'w')
     print(output, file=ofile)

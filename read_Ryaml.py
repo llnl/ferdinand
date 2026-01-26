@@ -66,12 +66,22 @@ def nuclIDs (nucl):
 
 ##############################################  read_Ryaml / Rjson
 
-def read_Ryaml(inFile, x4dict, emin_arg,emax_arg, noCov, plot, verbose,debug):
+def read_Ryaml(inFile,initial, x4dict, emin_arg,emax_arg, noCov, plot, verbose,debug):
   
-    print("Read",inFile,'\n')
+    print("Read",inFile,'as',initial,'\n')
     
     ifile = open(inFile,'r')
-    data = load(ifile, Loader=Loader)       
+    if 'json' not in initial:  # read yaml
+        from yaml import load
+        try:
+            from yaml import CLoader as Loader
+        except ImportError:
+            from yaml import Loader
+        data = load(ifile, Loader=Loader)
+
+    else:  # read json
+        import json
+        data = json.load(ifile)
     
     Parts = ['Header', 'R_Matrix', 'Particles', 'Reactions', 'Spin Groups', 'Data', 'Covariances'] 
 
@@ -470,9 +480,14 @@ def read_Ryaml(inFile, x4dict, emin_arg,emax_arg, noCov, plot, verbose,debug):
 if __name__=="__main__":
 
     import argparse
-    parser = argparse.ArgumentParser(description='Translate R-matrix evaluations from Ryaml to GNDS')
+    parser = argparse.ArgumentParser(description='Translate R-matrix evaluations from Ryaml/json to GNDS')
+    recognized_in = ['Ryaml', 'ryaml', 'json']
+    recognized_out= ['Ryaml', 'ryaml', 'json']
 
-    parser.add_argument('inFile', type=str, help='The input file you want to read as yaml.' )
+    parser.add_argument('inFile', type=str, help='The input file you want to read as yaml or json.' )
+    parser.add_argument("-i", "--initial", metavar="in-form", type=str, help="Input source format: Ryaml, json\n This is expected suffix of input file")
+    parser.add_argument('finalformat', type=str, default='xml', help="Output source format: xml, Ryaml, json")
+
     parser.add_argument("-e", "--emin", type=float, help="Min projectile lab energy")
     parser.add_argument("-E", "--Emax", type=float, help="Max projectile lab energy")
     parser.add_argument("-n", "--noCov", action="store_true", help="Ignore covariance matrix")
@@ -493,8 +508,25 @@ if __name__=="__main__":
 #         print('x4dict:',x4dict)
 #         print('x4dict entries',len(x4dict.keys()))
 
-    gnds = read_Ryaml(args.inFile, x4dict, args.emin,args.Emax, args.noCov,args.plot, args.verbose,args.debug)
+    in_s = args.inFile.split('.')[-1].lower()
+    initial = args.initial
+    if initial==None and in_s in recognized_in: initial = in_s 
 
-    output = args.inFile+'.xml'
-    files = gnds.saveAllToFile( output , covarianceDir = '.' )
-    print('Files written:\n',output,'\n',str(files[0]))
+    gnds = read_Ryaml(args.inFile, initial, x4dict, args.emin,args.Emax, args.noCov,args.plot, args.verbose,args.debug)
+
+    final =  args.finalformat
+    outFile = args.inFile+'.'+final
+
+    if final=='xml':
+        files = gnds.saveAllToFile( outFile , covarianceDir = '.' )
+        print('Files written:\n',outFile) #,'\n',str(files[0]))
+    elif final in recognized_out:
+        from write_Ryaml import write_Ryaml
+        output = write_Ryaml(gnds, final != 'json', args.verbose,args.debug)        
+        ofile = open(outFile,'w')
+        print(output, file=ofile)
+    else:
+        print('Output format',final,'not implemented')
+
+
+        

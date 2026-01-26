@@ -108,8 +108,8 @@ parser.add_argument("-S", "--Squeeze", action="store_true", help="Squeeze table 
 parser.add_argument(      "--CN", metavar='CN', type=str, default=(0,1), nargs=2, help="Spin and parity of compound nucleus, if needed")
 
 ## MAIN:
-recognized_in = ['endf', 'gnd', 'gnds', 'xml', 'gnds.xml', 'fresco', 'sfresco', 'sfrescoed', 'eda', 'amur', 'azr', 'azure', 'apar', 'rac', 'azure2', 'Ryaml', 'ryaml']    #  List of file extensions recognized for input format
-recognized_out= ['endf', 'gnd', 'gnds', 'xml', 'gnds.xml', 'fresco', 'sfresco', 'eda', 'azr', 'azure', 'azure2', 'hyrma', 'tex', 'Ryaml', 'all']    #  List of formats recognized for outputs
+recognized_in = ['endf', 'gnd', 'gnds', 'xml', 'gnds.xml', 'fresco', 'sfresco', 'sfrescoed', 'eda', 'amur', 'azr', 'azure', 'apar', 'rac', 'azure2', 'Ryaml', 'ryaml','json']    #  List of file extensions recognized for input format
+recognized_out= ['endf', 'gnd', 'gnds', 'xml', 'gnds.xml', 'fresco', 'sfresco', 'eda', 'azr', 'azure', 'azure2', 'hyrma', 'tex', 'Ryaml', 'json', 'all']    #  List of formats recognized for outputs
 outputs_all = ['xml', 'eda', 'sfresco', 'endf', 'hyrma', 'azr']  # Formats all generated when final=='all'
 
 args = parser.parse_args()
@@ -139,7 +139,7 @@ elif initial=='endf':
     gnd=rce['reactionSuite']
     if debug: open( args.inFile + ".echo", mode='w' ).writelines( line+'\n' for line in gnd.toXML_strList( ) )
 
-elif initial=='ryaml' or initial=='Ryaml':
+elif initial=='ryaml' or initial=='Ryaml'  or initial=='json':
     x4dict = {}
     if args.x4 is not None:
         lines = open(args.x4,'r').readlines( )
@@ -147,7 +147,7 @@ elif initial=='ryaml' or initial=='Ryaml':
             name,subentry,*_s = line.split()
             x4dict[name] = subentry
 
-    gnd = read_Ryaml( args.inFile, x4dict, None,None, args.noCov, False, verbose,debug )
+    gnd = read_Ryaml( args.inFile, initial, x4dict, None,None, args.noCov, False, verbose,debug )
     if debug: open( args.inFile + ".echo", mode='w' ).writelines( line+'\n' for line in gnd.toXML_strList( ) )
         
 elif initial=='azr' or initial=='azure' or initial=='azure2':
@@ -337,8 +337,8 @@ for final in outputList:
         else:
             covFile = None
 
-    elif final == 'Ryaml' or final == 'ryaml':
-        output = write_Ryaml(gndout, verbose,debug)
+    elif final == 'Ryaml' or final == 'ryaml' or final=='json':
+        output = write_Ryaml(gndout, final != 'json', verbose,debug)
         ofile = open(outFile,'w')
         print(output, file=ofile) 
         covFile = None       
