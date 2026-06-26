@@ -20,18 +20,17 @@ import masses
 from PoPs.chemicalElements.misc import *
 
 import json,sys
-from yaml import load, dump
+import yaml
 try:
     from yaml import CLoader as Loader, CDumper as Dumper
 except ImportError:
     from yaml import Loader, Dumper
 
-
 import os,pwd
 
 ##############################################  write_Ryaml / Rjson
 
-def write_Ryaml(gnds, Yaml, verbose,debug):
+def write_Ryaml(gnds,covariances, Yaml, verbose,debug):
   
     domain = gnds.styles.getEvaluatedStyle().projectileEnergyDomain
     energyUnit = domain.unit
@@ -341,34 +340,23 @@ def write_Ryaml(gnds, Yaml, verbose,debug):
 # Either way
     normData['order'] = dataOrder            
     Data['Normalizations'] = normData
-    print('Normatization data:',n_exfors,'from exforDataSet, and ',n_docDatas,'from inputDecks')
+    print('Normalization data:',n_exfors,'from exforDataSet, and ',n_docDatas,'from inputDecks')
             
 # COVARIANCES
 
-    if hasattr(gnds, 'loadCovariances'): 
-        covFileName = []
-        for externalFile in gnds.externalFiles:
-            covFileName.append(externalFile.path)
-            print('Covariances from',covFileName[-1])
-            Header['covarianceFile'] = covFileName[-1] # covFile
-            
-        covariances = gnds.loadCovariances()
-        if len(covariances)>0:
-    #         print('loaded')
-    #         print(covariances[0].toXML())
-            evalCovs = covariances[0].parameterCovariances[0].evaluated
-            
-            covArray = evalCovs.matrix.constructArray()
-            if debug: print(covArray)
-    #         print(dir(covArray))
-            print("Covariance matrix is",covArray.shape)
-            Covariances['square matrix'] = covArray.tolist()
-#             if plotcovs:
-#                 evalCovs.plot()
-        else:
-            print('No covariances linked')  
+    if covariances is not None:
+#         print('loaded')
+#         print(covariances[0].toXML())
+        evalCovs = covariances[0].parameterCovariances[0].evaluated
+        
+        covArray = evalCovs.matrix.constructArray()
+        if debug: print(covArray)
+#         print(dir(covArray))
+        print("Covariance matrix is",covArray.shape)
+        Covariances['square matrix'] = covArray.tolist()
     else:
-        print('No covariance data')
+        print('No covariances copied')  
+        Covariances = None
         
 
  # Keep Parts order:
@@ -383,7 +371,7 @@ def write_Ryaml(gnds, Yaml, verbose,debug):
         output = ''
         for part in Parts:  # Data.keys():
             d = {part:Info[part]}
-            output += dump(d, Dumper=Dumper) 
+            output += yaml.dump(d, Dumper=Dumper ) 
     else:
         output = json.dumps(Info, sort_keys=False, indent=2)
     
@@ -404,7 +392,11 @@ if __name__=="__main__":
     args = parser.parse_args()
     
     gnds = reactionSuiteModule.ReactionSuite.readXML_file( args.inFile )
-    
+
+    if hasattr(gnds, 'loadCovariances'): 
+        covariances = gnds.loadCovariances()
+        print('Linked covariances loaded')
+
     if args.json:
         otype = 'json' 
     else:
@@ -412,7 +404,7 @@ if __name__=="__main__":
         from json import load, dump
 
     outFile = args.inFile + '.' + otype
-    output = write_Ryaml(gnds, not args.json, args.verbose,args.debug)
+    output = write_Ryaml(gnds, covariances, not args.json, args.verbose,args.debug)
 
     ofile = open(outFile,'w')
     print(output, file=ofile)

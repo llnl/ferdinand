@@ -20,7 +20,6 @@ from brownies.legacy.converting.endfFileToGNDS import endfFileToGNDS
 from pqu import PQU as PQUModule
 import brownies.legacy.toENDF6.toENDF6     # this import adds 'toENDF6' methods to many GNDS classes
 from brownies.legacy.converting import toGNDSMisc
-from fudge.processing import processingInfo
 import fudge.styles as stylesModule
 import fudge.resonances.resolved as resolvedResonanceModule
 
@@ -133,7 +132,15 @@ cov = None
 
 if initial=='xml' or initial=='gnd' or initial=='gnds' or initial=='gnd.xml' or initial=='gnds.xml':
     gnd=reactionSuiteModule.ReactionSuite.readXML_file(args.inFile)
-    
+    if hasattr(gnd, 'loadCovariances'):
+        covFileName = []
+        for externalFile in gnd.externalFiles:
+            covFileName.append(externalFile.path)
+            print('   Covariances from',covFileName[-1])
+        cov = gnd.loadCovariances()
+        print('Input cov:',cov)
+        open( args.inFile + '.cov-debug', mode='w' ).writelines( line+'\n' for line in cov[0].toXML_strList( ) )
+  
 elif initial=='endf':
     rce = endfFileToGNDS( args.inFile, toStdOut=False, skipBadData=True, continuumSpectraFix = True, reconstructResonances=False , doCovariances = not args.noCov )
     gnd=rce['reactionSuite']
@@ -197,6 +204,7 @@ gndout = gndTransform(gnd,args.nocm, args.Elastic,args.nogamma,args.noreac,args.
 RMatrix = gndout.resonances.resolved.evaluated
 finalStyleName = 'eval'
 
+# NOTE: gndTransform does NOT copy covariances
 
 ############### Pointwise Reconstruction with Fresco, if requested
 
@@ -333,12 +341,12 @@ for final in outputList:
 #         covFile = files[1] if len(files)>1 else None
         open( outFile, mode='w' ).writelines( line+'\n' for line in gndout.toXML_strList( ) )
         if cov is not None:
-            open( covFile, mode='w' ).writelines( line+'\n' for line in cov.toXML_strList( ) )
+            open( covFile, mode='w' ).writelines( line+'\n' for line in cov[0].toXML_strList( ) )
         else:
             covFile = None
 
     elif final == 'Ryaml' or final == 'ryaml' or final=='json':
-        output = write_Ryaml(gndout, final != 'json', verbose,debug)
+        output = write_Ryaml(gndout, cov, final != 'json', verbose,debug)
         ofile = open(outFile,'w')
         print(output, file=ofile) 
         covFile = None       
@@ -349,8 +357,7 @@ for final in outputList:
        
     elif final == 'endf' :
         gndout.convertUnits( {'MeV':'eV'} )
-        flags = processingInfo.TempInfo( )
-        flags['verbosity'] = 0
+        flags = {'verbosity': 0}
         with open( outFile, 'w' ) as fout:
             fout.write( gndout.toENDF6( finalStyleName, flags, covarianceSuite = cov , lineNumbers = args.lineNumbers) )
         if cov is not None: note = ' (includes covariances)'
