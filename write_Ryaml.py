@@ -136,7 +136,10 @@ def write_Ryaml(gnds,covariances, Yaml, verbose,debug):
         except:
             pass
 
-        Reactions[reac] = {'label':kp, 'ejectile':p,  'residual':t, 'Q':QI} 
+        reacDict = {'label':kp, 'ejectile':p,  'residual':t, 'Q':QI} 
+        if pair.eliminated: reacDict['eliminated'] = True
+        Reactions[reac] = reacDict
+
         if prmax != Rm_global:  Reactions[reac]['scatteringRadius'] = prmax
         if hsrad != prmax:      Reactions[reac]['hardSphereRadius'] = hsrad
         
@@ -217,7 +220,10 @@ def write_Ryaml(gnds,covariances, Yaml, verbose,debug):
             lch = ch.L
             sch = float(ch.channelSpin)
             B = ch.boundaryConditionValue            
-            channels.append([str(rr),lch,sch,B])
+            if B is not None:
+                channels.append([str(rr),lch,sch,B])
+            else:
+                channels.append([str(rr),lch,sch])
             if B is not None: channelBCOverrides += 1
             
         poleData = {}
@@ -344,9 +350,9 @@ def write_Ryaml(gnds,covariances, Yaml, verbose,debug):
             
 # COVARIANCES
 
-    if covariances is not None:
+    if covariances is not None and len(covariances) > 0:
 #         print('loaded')
-#         print(covariances[0].toXML())
+#         print(covariances)
         evalCovs = covariances[0].parameterCovariances[0].evaluated
         
         covArray = evalCovs.matrix.constructArray()

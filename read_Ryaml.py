@@ -132,19 +132,25 @@ def read_Ryaml(inFile,initial, x4dict, emin_arg,emax_arg, noCov, plot, verbose,d
         s = p.get('spin',None)
         pt = p.get('parity',None)
         ex = p.get('excitation',0.0)
+        eliminated = p.get('eliminated',False)
         if s is not None:
             if int(2*s) % 2 == 0:
                 s = int(s)
             else:
                 s = '%i/2' % int(2*s)
-        if debug: print(id,'is',gndsName,m,Z,s,pt,ex)
-        level = 0 if ex == 0.0 else 1  # FIXME
+        if '_e' not in id:
+            level = 0
+        else:
+            level = int( id.split('_e')[-1] )
+#         level = 0 if ex == 0.0 else 1  # FIXME
+        if debug: print(id,'is',gndsName,m,Z,s,pt,ex,level,':',p)
+
 
         if Z==0 and m == 0 :   # g
             particle = miscModule.buildParticleFromRawData( gaugeBosonModule.Particle, gndsName, mass = ( 0, 'amu' ), spin = (s,spinUnit ),  parity = (pt,'' ), charge = (0,'e') )
-        elif Z<1 and m > 0.5 and m < 1.5 and gndsName != 'H1' :  # n or p
+        elif Z<1 and m > 0.5 and m < 1.5 and gndsName != 'H1' or gndsName=='nn':  # n or p or nn
             particle = miscModule.buildParticleFromRawData( baryonModule.Particle, gndsName, mass = (m,'amu' ), spin = (s,spinUnit ),  parity = (pt,'' ), charge = (Z,'e') )
-        else: # nucleus in its gs
+        else: # nucleus in known spin and parity
             if s is not None and pt is not None:
                 nucleus = miscModule.buildParticleFromRawData( nucleusModule.Particle, gndsName, index = level, energy = ( ex, energyUnit) , spin=(s,spinUnit), parity=(pt,''), charge=(Z,'e'))
             else:
@@ -157,7 +163,7 @@ def read_Ryaml(inFile,initial, x4dict, emin_arg,emax_arg, noCov, plot, verbose,d
 # REACTIONS
 
     reactionOrder = Reactions.get('order',list(Reactions.keys()))
-
+    ReichMoore = False
     for id in reactionOrder:
         partition = Reactions[id]
         label = partition['label']
@@ -165,6 +171,7 @@ def read_Ryaml(inFile,initial, x4dict, emin_arg,emax_arg, noCov, plot, verbose,d
         residual = partition['residual']
         Q = partition['Q']
         prmax = partition.get('scatteringRadius',Rm_global)
+        eliminated = partition.get('eliminated',False)
         eject,i = nuclIDs(ejectile)
         resid,level = nuclIDs(residual)
         B = partition.get('B',None)
@@ -176,12 +183,17 @@ def read_Ryaml(inFile,initial, x4dict, emin_arg,emax_arg, noCov, plot, verbose,d
         elif ejectile=='H3' :             MT = 700+level
         elif ejectile=='He3' :            MT = 750+level
         elif ejectile=='He4' :            MT = 800+level
-        elif ejectile[:6]=='photon':      MT = 900+level
+        elif ejectile=='nn'  :            MT = 875+level
+        elif ejectile[:6]=='photon':
+            if not eliminated:
+                MT = 900+level
+            else: 
+                MT = 102
         if label == elasticChannel:       MT = 2
         
         reaction  = zeroReaction(label,MT, Q, [PoPs_data[ejectile],PoPs_data[residual]], None, emin,emax,energyUnit, debug)
         gnds.reactions.add(reaction)
-        eliminated = False
+
         link = linkModule.Link(reaction)
         if prmax is not None and prmax != Rm_global:
             scatRadius = scatteringRadiusModule.ScatteringRadius(      
@@ -192,7 +204,12 @@ def read_Ryaml(inFile,initial, x4dict, emin_arg,emax_arg, noCov, plot, verbose,d
         rreac = commonResonanceModule.ResonanceReaction ( label=label, link=link, ejectile=ejectile, Q=None, eliminated=eliminated, scatteringRadius = scatRadius  )
         reaction.updateLabel( )
         resonanceReactions.add(rreac)
+        if eliminated: 
+            ReichMoore = True
+            gchannelName = label
+#             rrcap = 'damping'
 
+        
 # SPINGROUPS
 
     spinGroups = resolvedResonanceModule.SpinGroups()
@@ -214,9 +231,18 @@ def read_Ryaml(inFile,initial, x4dict, emin_arg,emax_arg, noCov, plot, verbose,d
         channelNames = []
         channels = resolvedResonanceModule.Channels()
         
+        if ReichMoore:
+            columnHeaders.append( tableModule.ColumnHeader(1, name=gchannelName, unit= widthUnit) )
+            Sch = resolvedResonanceModule.Spin( 0.0 )
+            channels.add( resolvedResonanceModule.Channel('1', gchannelName, columnIndex=1, L=0, channelSpin=Sch) )
+            firstp = 2
+        else:
+            firstp = 1
+
         chidx = 0
         for chan in partialWaves:
-            rr,lch,sch,B = chan
+            rr,lch,sch, *B = chan
+            if isinstance(B, list) and len(B)==0: B = None
             if debug: print(J,parity,rr,lch,sch,B)
             
 #             if debug: print("From p,t =",p,t," find channel ",rr)
@@ -230,10 +256,10 @@ def read_Ryaml(inFile,initial, x4dict, emin_arg,emax_arg, noCov, plot, verbose,d
                 channelName = '%s width_%d' % (thisChannel.label, jdx)
                 jdx += 1
 
-            columnHeaders.append( tableModule.ColumnHeader(chidx+1, name=channelName, unit= widthUnit ) )
+            columnHeaders.append( tableModule.ColumnHeader(chidx+firstp, name=channelName, unit= widthUnit ) )
 
             Sch = resolvedResonanceModule.Spin( sch )
-            channels.add( resolvedResonanceModule.Channel(str(chidx+1), rr, columnIndex=chidx+1, 
+            channels.add( resolvedResonanceModule.Channel(str(chidx+firstp), rr, columnIndex=chidx+firstp, 
                     L=lch, channelSpin=Sch, boundaryConditionValue = B ))
                             
             if debug: print(str(chidx), str(chidx),'LS:', int(lch), float(sch), chidx+1, 'B=',BC)
@@ -250,8 +276,16 @@ def read_Ryaml(inFile,initial, x4dict, emin_arg,emax_arg, noCov, plot, verbose,d
             rowData =        [ poleEnergy ]   # pole energy
             covIndices.append( covIndex )   # pole covIndex
             energies.append( poleEnergy )
+
+            if ReichMoore:
+                covIndex   = pd[0][2]
+                poleDamping = pd[0][3]
+                rowData +=        [ poleDamping ]   # pole poleDamping
+                covIndices.append( covIndex )   # pole covIndex
+
             if covIndex is None: nFixedPars += 1
             
+#             print('For pole',pole,' widths are',len(pd[1]) )
             for col in range(len(pd[1])):   # widths
                 width = pd[1][col][1]
                 covIndex = pd[1][col][0] 
@@ -259,6 +293,7 @@ def read_Ryaml(inFile,initial, x4dict, emin_arg,emax_arg, noCov, plot, verbose,d
                 covIndices.append(  covIndex )
                 if covIndex is None: nFixedPars += 1
                     
+#             print('For pole',pole,' rowData has',len(rowData) )
             rmatr.append(rowData )
 
         nle = len(energies)
@@ -381,6 +416,7 @@ def read_Ryaml(inFile,initial, x4dict, emin_arg,emax_arg, noCov, plot, verbose,d
     
 # COVARIANCES
 
+    if Covariances is None: Covariances = {}
     covariances = Covariances.get('square matrix',None)      
     nParams = nVarPar + nVarData  # Data covariances not yet included in GNDS  FIXME
 
