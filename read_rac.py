@@ -288,7 +288,7 @@ def read_rac(inFile,elastic, amplitudes, emin,emax, Lvals,wzero, verbose,debug):
                     
         NCH = len(chans)-1
         for chidx in range(NCH):
-            part,sch,lch = chans[chidx+1]
+            part,sch,lch = chans[chidx+firstp]
             rr = rrList[part-1] 
             #if debug: print "From p,t =",p,t," find channel ",rr
             thisChannel = resonanceReactions[rr]

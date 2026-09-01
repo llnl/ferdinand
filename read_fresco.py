@@ -173,7 +173,7 @@ def read_fresco(inFile, amplitudes,Lvals,CNspec,nonzero,noCov, verbose,debug):
     CNspin, CNparity = CNspec
     CNparity = 1 if CNparity in ['P','p'] else -1
     Q_offset = 0.0
-    #if debug: print 'itsart,itfin=',itstart,itfin
+    #if debug: print('itstart,itfin=',itstart,itfin,'from',inc['nex'])
     for it in range(len(states)):  # ignore final empty namelist)
         if it>itfin:
             ic+=1   # next partition
@@ -181,14 +181,19 @@ def read_fresco(inFile, amplitudes,Lvals,CNspec,nonzero,noCov, verbose,debug):
             itstart = itfin+1
             if debug: print(ic,' inc[]=',inc)
             itfin = itstart + inc['nex']-1
-            #if debug: print 'itsart,itfin=',itstart,itfin
+            if debug: print('\nitstart,itfin=',itstart,itfin,'from',inc['nex'])
        
         p,pMass,pZ = inc['namep'],inc['massp'],inc['zp']
         t,tMass,tZ = inc['namet'],inc['masst'],inc['zt']
 #  Use standard GND names:
         pA = int(pMass+0.5)
         tA = int(tMass+0.5)
-        p = idFromZAndA(pZ,pA) if p not in ['photon','gamma'] else 'photon'
+        if p in ['photon','gamma'] :
+	        p = 'photon'
+        elif p == 'nn':
+            pass
+        else:
+            p = idFromZAndA(pZ,pA)
         t = idFromZAndA(tZ,tA)
 
         Qvalue = inc['qval']
@@ -237,7 +242,7 @@ def read_fresco(inFile, amplitudes,Lvals,CNspec,nonzero,noCov, verbose,debug):
             projectile = miscModule.buildParticleFromRawData( gaugeBosonModule.Particle, p, mass = ( 0, 'amu' ), spin = (Jp,spinUnit ),  parity = (ptyp,'' ), charge = (0,'e') )
             CNspin = Jt
             CNparity = ptyt
-        elif pZ<1 and pMass < 1.5 and p != 'H1' :  # n or p
+        elif pZ<1 and pMass < 2.5 and p != 'H1' :  # n or p
             projectile = miscModule.buildParticleFromRawData( baryonModule.Particle, p, mass = (pMass,'amu' ), spin = (Jp,spinUnit ),  parity = (ptyp,'' ), charge = (pZ,'e') )
         else: # nucleus in its gs
             nucleus = miscModule.buildParticleFromRawData( nucleusModule.Particle, p, index = 0, energy = ( 0.0, 'MeV' ) , spin=(Jp,spinUnit), parity=(ptyp,''), charge=(pZ,'e'))

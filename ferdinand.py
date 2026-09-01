@@ -138,8 +138,9 @@ if initial=='xml' or initial=='gnd' or initial=='gnds' or initial=='gnd.xml' or 
             covFileName.append(externalFile.path)
             print('   Covariances from',covFileName[-1])
         cov = gnd.loadCovariances()
-        print('Input cov:',cov)
-        open( args.inFile + '.cov-debug', mode='w' ).writelines( line+'\n' for line in cov[0].toXML_strList( ) )
+        if len(cov)>0:
+            print('Input cov:',cov)
+            open( args.inFile + '.cov-debug', mode='w' ).writelines( line+'\n' for line in cov[0].toXML_strList( ) )
   
 elif initial=='endf':
     rce = endfFileToGNDS( args.inFile, toStdOut=False, skipBadData=True, continuumSpectraFix = True, reconstructResonances=False , doCovariances = not args.noCov )
@@ -340,7 +341,7 @@ for final in outputList:
 #         files = gndout.saveAllToFile( outFile , covarianceDir = '.' )
 #         covFile = files[1] if len(files)>1 else None
         open( outFile, mode='w' ).writelines( line+'\n' for line in gndout.toXML_strList( ) )
-        if cov is not None:
+        if cov is not None and len(cov)>0:
             open( covFile, mode='w' ).writelines( line+'\n' for line in cov[0].toXML_strList( ) )
         else:
             covFile = None
