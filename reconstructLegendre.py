@@ -464,7 +464,7 @@ def reconstructLegendre(gnd,base,verbose,debug,egrid,stride,angles,legendre,thin
         widths = [R.getColumn( col.name, widthUnit ) for col in R.columns if col.name != 'energy']
         
         if ReichMoore: 
-            E_damping[jset,:rows] = numpy.asarray(widths[0][:],  dtype=REAL)
+            E_damping[jset,:rows] = numpy.asarray(widths[0][:],  dtype=DBLE)
             if IFG==1:     E_damping[jset,:] = 2*E_damping[jset,:]**2            
             if debug: print('Set',jset,'radiative damping',E_damping[jset,:rows])
         
