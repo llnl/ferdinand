@@ -149,7 +149,11 @@ R-matrix parameters !!!!! +++++ ^^^^ \n\
     tableFooter = '\\hline\n \\end{tabular}\n \\end{table}\n\n'
 
 ### HEADER
-    geom = '' if not squeeze else "\\usepackage[inner=1cm, outer=1cm]{geometry}"    
+    if squeeze:
+        geom = "\\usepackage[inner=1cm, outer=1cm]{geometry}"
+        print('\nIf tables are too wide, insert "landscape" in [aps,] list in \\geometry.')
+    else:
+        geom = ''    
     dHeader = docHeader.replace('GGGGGG',geom)
     latex.writelines(dHeader % (title,pwd.getpwuid(os.getuid())[4]))
 

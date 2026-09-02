@@ -65,7 +65,7 @@ parser.add_argument("-L", "--Lvals", type=int, nargs='+', help="When reading fre
 parser.add_argument("-e", "--elastic", type=str,  help="ResonanceReaction label of elastic particle-pair in input file")
 parser.add_argument("-l", "--lower", metavar="Emin", type=float,  default="0.01", help="Lower energy of R-matrix evaluation")
 parser.add_argument("-u", "--upper", metavar="Emax", type=float,  default="20.", help="Upper energy of R-matrix evaluation")
-parser.add_argument("-D", "--Distant", metavar="Edist", type=float, default="25",  help="Pole energy above which are all distant poles, to help with labeling. Fixed in sfresco searches.")
+parser.add_argument("-D", "--Distant", metavar="Edist", type=float, help="Pole energy above which are all distant poles, to help with labeling. Fixed in sfresco searches.")
 parser.add_argument("-B", "--Bound", metavar="Ebound", type=float, default="-0.01",  help="Pole energy below which are all bound poles, to help with labeling. Fixed in sfresco searches.")
 parser.add_argument(      "--x4", type=str, help="List of exfor subentry names")
 
