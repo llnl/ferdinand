@@ -40,6 +40,7 @@ def write_tex(gnd,inFile,outFile,background, printEcm,printEComp,squeeze,zero, v
     fmscal = 0.0478450
     etacns = 0.1574855
     amu = 931.494013
+    widthUnit = 'MeV' if IFG==0 else 'MeV**(1/2)'
 
     # printEcm = True   # Print Cm energies in elastic channel, otherwise lab projectile energies
     # printEComp = False # Make E=0 the threshold of the elastic channel
@@ -47,10 +48,10 @@ def write_tex(gnd,inFile,outFile,background, printEcm,printEComp,squeeze,zero, v
 
 
     docHeader = """
-\\documentclass[aps]{revtex4}
+\\documentclass[aps,letterpaper]{revtex4}
 \\usepackage{longtable}
+GGGGGG
 \\begin{document}
-
 \\title{ %s }
 \\author{%s} 
 \\date{ \\today }
@@ -75,6 +76,7 @@ def write_tex(gnd,inFile,outFile,background, printEcm,printEComp,squeeze,zero, v
 \\hline\\hline \n"
 
     RtableHeader = "\
+ SSSSS\
 \\begin{longtable}{c|@@@@} \n\
 \\caption{ \n\
 R-matrix parameters !!!!! +++++ ^^^^ \n\
@@ -147,7 +149,9 @@ R-matrix parameters !!!!! +++++ ^^^^ \n\
     tableFooter = '\\hline\n \\end{tabular}\n \\end{table}\n\n'
 
 ### HEADER
-    latex.writelines(docHeader % (title,pwd.getpwuid(os.getuid())[4]))
+    geom = '' if not squeeze else "\\usepackage[inner=1cm, outer=1cm]{geometry}"    
+    dHeader = docHeader.replace('GGGGGG',geom)
+    latex.writelines(dHeader % (title,pwd.getpwuid(os.getuid())[4]))
 
 ### PARTICLE PROPERTIES
     colMarkers = 'llcc c l'
@@ -220,10 +224,10 @@ R-matrix parameters !!!!! +++++ ^^^^ \n\
 
     frame = 'cm' if printEcm else 'lab'
     if IFG:
-        widths = '\\\\ Reduced width amplitudes $\gamma_c$ in units of %s$^{1/2}$ (%s).' % (width_unitsi,frame)
+        widths = '\\\\ Reduced width amplitudes $\gamma_c$ in units of %s (%s).' % (width_unitsi,frame)
     else:
         widths = '\\\\ Formal widths $\Gamma_c$ (in the ENDF6 convention) in units of %s (%s).' % (width_unitsi,frame)
-    widths += '\\\\ Boundary conditions are %s : %s' % (BC,BV)
+#     widths += '\\\\ Boundary conditions are %s : %s' % (BC,BV)
     if zero: widths += " Channels with all zero widths are not printed."
     tHead = tHead.replace('^^^^',widths)
     
@@ -238,7 +242,7 @@ R-matrix parameters !!!!! +++++ ^^^^ \n\
 
         R = Jpi.resonanceParameters.table
         poleEnergies = R.getColumn('energy','MeV')
-        widths = [R.getColumn( col.name, 'MeV' ) for col in R.columns if col.name != 'energy']
+        widths = [R.getColumn( col.name, widthUnit ) for col in R.columns if col.name != 'energy']
         Lmax = -1
         LmaxNZ = -1
         zeros = [True for n in range(1+len(Jpi.channels))]
@@ -327,7 +331,7 @@ R-matrix parameters !!!!! +++++ ^^^^ \n\
                 if width==0:
                     w = '& 0.0 '
                 elif abs(width)<10:
-                    w = '& $%.5f$ ' % (width)
+                    w = '& $%.4f$ ' % (width) if squeeze else '& $%.5f$ ' % (width)
                 elif abs(width)<1e3: # large
                     w = '& $%.2f$ ' % (width)
                 else:   # very large!
