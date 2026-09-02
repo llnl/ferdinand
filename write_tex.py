@@ -235,7 +235,7 @@ R-matrix parameters !!!!! +++++ ^^^^ \n\
         widths = '\\\\ Formal widths $\Gamma_c$ (in the ENDF6 convention) in units of %s (%s).' % (width_unitsi,frame)
 #     widths += '\\\\ Boundary conditions are %s : %s' % (BC,BV)
     if zero: widths += " Channels with all zero widths are not printed."
-    if ReichMoore and IFG==1: widths += " Damping widths are $\Gamma_d = 2 \gamma_d^2$ from reduced damping widths in the table."
+    if ReichMoore and IFG==1: widths += "\\\\ Damping E widths in the table are $\Gamma_d = 2 \gamma_d^2$ from reduced damping widths."
     tHead = tHead.replace('^^^^',widths)
     
     latex.writelines(tHead)    
@@ -307,7 +307,7 @@ R-matrix parameters !!!!! +++++ ^^^^ \n\
             if label==lastChannel: #  and squeeze:
                 line += '& %i, %s ' % (lch,SS)
             elif  rreac.eliminated:
-                line += '& (damping)'
+                line += '& (damping E)'
             else:
                 line += '& LS: %i, %s ' % (lch,SS)
             lastChannel = label
@@ -335,6 +335,8 @@ R-matrix parameters !!!!! +++++ ^^^^ \n\
                 #if debug: print "W,cm,print",widths[n-1][i],printEcm,width
                 
                 #line += '%.5f %i %.1f &' % (width,lch,sch)
+                if rreac.eliminated and IFG==1: 
+                    width = 2.0 * width**2    # print MeV damping also in the IFG=1 case!!
                 if width==0:
                     w = '& 0.0 '
                 elif abs(width)<10:
