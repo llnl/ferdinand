@@ -297,6 +297,7 @@ def reconstructCrossSections(gnd,MatrixL,DiagonalOnly,dE,Averaging,stride,EMAX,L
     if brune: MatrixL = True
     print('BC =',BC, ' brune =',brune,'MatrixL',MatrixL)
     IFG = RMatrix.reducedWidthAmplitudes
+    widthUnit = 'MeV' if IFG==0 else 'MeV**(1/2)'
     
     n_jsets = len(RMatrix.spinGroups)
     n_poles = 0
@@ -305,10 +306,12 @@ def reconstructCrossSections(gnd,MatrixL,DiagonalOnly,dE,Averaging,stride,EMAX,L
     
     np = len(RMatrix.resonanceReactions)
     ReichMoore = False
-    if RMatrix.resonanceReactions[0].eliminated: 
-        ReichMoore = True
-        np -= 1   # exclude Reich-Moore channel here
-        print('Has Reich-Moore damping')
+    for reaction in RMatrix.resonanceReactions:
+        if reaction.eliminated:
+            ReichMoore = True
+            np -= 1   # exclude Reich-Moore channel here
+            print('Has Reich-Moore damping with',reaction.label)
+            
     prmax = numpy.zeros(np, dtype=REAL)
     QI = numpy.zeros(np, dtype=REAL)
     rmass = numpy.zeros(np, dtype=REAL)
@@ -391,7 +394,7 @@ def reconstructCrossSections(gnd,MatrixL,DiagonalOnly,dE,Averaging,stride,EMAX,L
     tot_poles = 0
     chPrmax = []
     chHsprad = []
-    damping = 1 if ReichMoore else 0
+    damping = 1 if ReichMoore else 0  # row data offset past damping width
     for Jpi in RMatrix.spinGroups:
         R = Jpi.resonanceParameters.table
         n_poles = max(n_poles,R.nRows)
@@ -442,11 +445,12 @@ def reconstructCrossSections(gnd,MatrixL,DiagonalOnly,dE,Averaging,stride,EMAX,L
         seg_row[jset] = rows
 
         E_poles[jset,:rows] = numpy.asarray( R.getColumn('energy','MeV') , dtype=REAL)   # lab MeV
-        widths = [R.getColumn( col.name, 'MeV' ) for col in R.columns if col.name != 'energy']
+        widths = [R.getColumn( col.name, widthUnit ) for col in R.columns if col.name != 'energy']
         
-        if ReichMoore: E_damping[jset,:rows] = numpy.asarray(widths[0][:],  dtype=REAL)
-        if IFG==1:     E_damping[jset,:] = 2*E_damping[jset,:]**2            
-        if ReichMoore and debug: print('Set',jset,'radiative damping',E_damping[jset,:rows])
+        if ReichMoore: 
+            E_damping[jset,:rows] = numpy.asarray(widths[0][:],  dtype=REAL)
+            if IFG==1:     E_damping[jset,:] = 2*E_damping[jset,:]**2            
+            if debug: print('Set',jset,'radiative damping',E_damping[jset,:rows])
                     
         c = 0
         for ch in Jpi.channels:
@@ -498,7 +502,6 @@ def reconstructCrossSections(gnd,MatrixL,DiagonalOnly,dE,Averaging,stride,EMAX,L
 # COULOMB functions at pole energies if needed 
     if dE is None or IFG==0 or True:
         for jset in range(n_jsets):
-    #             print('J,pi =',J_set[jset],parity)
             for n in range(n_poles):
                 Fwid = 0.0
                 obsEnergy = E_poles[jset,n]

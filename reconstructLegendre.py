@@ -325,6 +325,7 @@ def reconstructLegendre(gnd,base,verbose,debug,egrid,stride,angles,legendre,thin
     MatrixL = False
     if brune: MatrixL = True
     print('BC =',BC, ' brune =',brune,'MatrixL',MatrixL)
+    widthUnit = 'MeV' if IFG==0 else 'MeV**(1/2)'
     
     if angles is not None:
         thmin = angles[0]
@@ -351,9 +352,11 @@ def reconstructLegendre(gnd,base,verbose,debug,egrid,stride,angles,legendre,thin
     
     np = len(RMatrix.resonanceReactions)
     ReichMoore = False
-    if RMatrix.resonanceReactions[0].eliminated: 
-        ReichMoore = True
-        np -= 1   # exclude Reich-Moore channel from scattering channels
+    for reaction in RMatrix.resonanceReactions:
+        if reaction.eliminated:
+            ReichMoore = True
+            np -= 1   # exclude Reich-Moore channel here
+            print('Has Reich-Moore damping with',reaction.label)
     prmax = numpy.zeros(np)
     QI = numpy.zeros(np)
     rmass = numpy.zeros(np)
@@ -458,11 +461,12 @@ def reconstructLegendre(gnd,base,verbose,debug,egrid,stride,angles,legendre,thin
 #         print('J,pi =',J_set[jset],pi_set[jset],'R,C =',rows,cols)
 
         E_poles[jset,:rows] = numpy.asarray( R.getColumn('energy','MeV') , dtype=DBLE)   # lab MeV
-        widths = [R.getColumn( col.name, 'MeV' ) for col in R.columns if col.name != 'energy']
+        widths = [R.getColumn( col.name, widthUnit ) for col in R.columns if col.name != 'energy']
         
-        if ReichMoore: E_damping[jset,:rows] = numpy.asarray(widths[0][:],  dtype=DBLE)
-        if IFG==1:     E_damping[jset,:] = 2*E_damping[jset,:]**2            
-        if ReichMoore and debug: print('Set',jset,'radiative damping',E_damping[jset,:rows])
+        if ReichMoore: 
+            E_damping[jset,:rows] = numpy.asarray(widths[0][:],  dtype=REAL)
+            if IFG==1:     E_damping[jset,:] = 2*E_damping[jset,:]**2            
+            if debug: print('Set',jset,'radiative damping',E_damping[jset,:rows])
         
         n = 0
         for ch in Jpi.channels:
