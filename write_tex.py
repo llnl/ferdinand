@@ -95,12 +95,14 @@ R-matrix parameters !!!!! +++++ ^^^^ \n\
     
     npairs = 0
     proplines = []
+    ReichMoore = False
     chanlines = ['GNDS Label~~~   & Projectile & Target & Q value  & Radius & Compound & Eliminated  \\\\ \n','\\hline \n']
     for pair in RMatrix.resonanceReactions:
         npairs += 1
         kp = pair.label
         reaction = pair.link.link
         p,t = pair.ejectile,pair.residual
+        ReichMoore = ReichMoore or pair.eliminated
         projectile = PoPs[p];
         target     = PoPs[t];
         pMass = projectile.getMass('amu');   tMass =     target.getMass('amu');
@@ -233,6 +235,7 @@ R-matrix parameters !!!!! +++++ ^^^^ \n\
         widths = '\\\\ Formal widths $\Gamma_c$ (in the ENDF6 convention) in units of %s (%s).' % (width_unitsi,frame)
 #     widths += '\\\\ Boundary conditions are %s : %s' % (BC,BV)
     if zero: widths += " Channels with all zero widths are not printed."
+    if ReichMoore and IFG==1: widths += " Damping widths are $\Gamma_d = 2 \gamma_d^2$ from reduced damping widths in the table."
     tHead = tHead.replace('^^^^',widths)
     
     latex.writelines(tHead)    
